@@ -1,0 +1,174 @@
+#+title: README.org
+#+date: [2026-01-09 Fri]
+#+author: Akira Kyle
+~ob-julia~ provides [[https://orgmode.org/worg/org-contrib/babel/][org babel]] support for [[https://julialang.org/][the Julia Programming Language]].
+This is my take on ~ob-julia~ that attempts to be relatively minimalist and use standard emacs interfaces.
+* Installation
+
+#+begin_src emacs-lisp
+(use-package ob-julia
+  :ensure (ob-julia :repo "akirakyle/emacs-ob-julia")
+  :after (org)
+  :config
+  (add-to-list 'org-babel-load-languages '(julia . t))
+  (org-babel-do-load-languages 'org-babel-load-languages org-babel-load-languages))
+#+end_src
+* Setup
+
+#+name: el-custom
+#+begin_src emacs-lisp
+(defgroup ob-julia nil
+  "Org Babel Julia via per-session Julia processes using netstrings."
+  :group 'org-babel)
+
+(defcustom ob-julia-executable "julia"
+  "Julia executable."
+  :type 'string)
+
+(defcustom ob-julia-executable-arguments '("--project=.")
+  "List of arguments passed to julia executabel."
+  :type 'string)
+
+(defvar org-babel-default-header-args:julia
+  '((:module . "Main") (:results . "both") (:output-dir . "./.ob-julia/")))
+#+end_src
+* Examples
+
+** ~:result {output, value, both}~
+
+#+begin_src org
+,#+begin_src julia
+2π
+,#+end_src
+
+,#+RESULTS:
+: 6.283185307179586
+#+end_src
+
+#+begin_src org
+,#+begin_src julia
+println("Hello, Julia σ 👋")
+,#+end_src
+
+,#+RESULTS:
+: Hello, Julia σ 👋
+#+end_src
+
+#+begin_src org
+,#+begin_src julia :results output
+println("hi")
+1+5
+,#+end_src
+
+,#+RESULTS:
+: hi
+#+end_src
+
+#+begin_src org
+,#+begin_src julia :results value
+println("hi")
+1+5
+,#+end_src
+
+,#+RESULTS:
+: 6
+#+end_src
+
+#+begin_src org
+,#+begin_src julia :results both
+println("hi")
+1+5
+,#+end_src
+
+,#+RESULTS:
+: hi
+: 6
+#+end_src
+** Exception error pane
+
+#+begin_src org
+,#+begin_src julia
+throw(ErrorException("I've done a bad thing");)
+,#+end_src
+
+,#+RESULTS:
+#+end_src
+** Sessions
+
+#+begin_src org
+,#+begin_src julia :results none :session ses1
+x = 12345
+,#+end_src
+
+,#+begin_src julia :results none :session ses2
+x = 67890
+,#+end_src
+
+,#+begin_src julia :results value :session ses1
+x
+,#+end_src
+
+,#+RESULTS:
+: 12345
+#+end_src
+** ~:var~ header arguments
+
+#+begin_src org
+,#+begin_src julia :var r = 4
+"the area of a circle with radius of $r is $(π * r ^ 2)."
+,#+end_src
+
+,#+RESULTS:
+: "the area of a circle with radius of 4 is 50.26548245743669."
+#+end_src
+** Images
+
+#+begin_src org
+,#+begin_src julia :dir ../figs/ob-julia
+using Pkg
+Pkg.status()
+,#+end_src
+
+,#+RESULTS:
+: Status `~/data/www/akirakyle.com/figs/ob-julia/Project.toml`
+:   [13f3f980] CairoMakie v0.15.8
+
+,#+name: sin-plot
+,#+begin_src julia :results value file link :dir ../figs/ob-julia :output-dir ../figs/ob-julia
+using CairoMakie
+CairoMakie.activate!(type = "svg", pt_per_unit=2)
+xs=collect(-2π:0.1:2π)
+lines(xs, sin.(xs))
+,#+end_src
+
+,#+RESULTS: sin-plot
+[[file:../figs/ob-julia/sin-plot.svg]]
+
+,#+begin_src julia :results value file link :file ../figs/ob-julia/exp-plot.svg
+using Pkg
+Pkg.activate("../figs/ob-julia")
+using CairoMakie
+CairoMakie.activate!(type = "svg", pt_per_unit=2)
+xs=collect(-2π:0.1:2π)
+lines(xs, exp.(xs))
+,#+end_src
+
+,#+RESULTS:
+[[file:../figs/ob-julia/exp-plot.svg]]
+#+end_src
+* TODO Feature comparison
+
+Compare with similar packages:
+- upstream version: https://github.com/bzg/org-mode/blob/main/lisp/ob-julia.el
+  - Depends on [[https://ess.r-project.org/][ESS - Emacs Speaks Statistics]]
+- the original?: https://github.com/nico202/ob-julia
+- using vterm: https://github.com/shg/ob-julia-vterm.el
+- using emacs-snail:  https://github.com/gcv/julia-snail
+- a notable fork: https://github.com/karthink/ob-julia
+- https://blog.tecosaur.com/tmio/2021-05-31-async.html
+
+I took a good look at all the ~ob-julia~ implementations I could find before embarking on creating this take on ~ob-julia~.
+I had hopped one of them could be fix/adapted to my workflows, however I found them all to have unnecessarily complicated logic around their rpc protocol implementation.
+I think it's good to view ~org-babel~ as essentially a simple rpc protocol for executing arbitrary code of other languages from elisp.
+So the main distinction of this package is the use of netstrings for rather than a unique message terminator to facilitate this rpc protocol.
+While a unique message terminator works okay in practice and helps facilitate streaming results back in principle, I think it unnecessarily complicates the implementation and in practice emacs does not handle rapid async filter functions causing buffer modifications always so elegantly.
