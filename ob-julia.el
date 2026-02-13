@@ -96,7 +96,7 @@ function handle_eval(code::String, iolimit::String)
     excio = mkio(excio_)
     mime = \"text/plain\"
 
-    redirect_stdio(stdout=outio, stderr=errio) do
+    redirect_stdio(stdout=outio, stderr=errio, stdin=devnull) do
         try
             result = Base.include_string(mod, code)
             mime = Core.eval(mod, :(ObJulia.format_result($result, $resio)))

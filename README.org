@@ -3,6 +3,8 @@
 #+author: Akira Kyle
 ~ob-julia~ provides [[https://orgmode.org/worg/org-contrib/babel/][org babel]] support for [[https://julialang.org/][the Julia Programming Language]].
 This is my take on ~ob-julia~ that attempts to be relatively minimalist and use standard emacs interfaces.
+
+[[https://akirakyle.com/notes/ob-julia][The literate documentation for this package lives here]]. 
 * Installation
 
 #+begin_src emacs-lisp
@@ -123,7 +125,8 @@ x
 #+end_src
 ** Images
 
-#+begin_src org
+#+name: org-images
+#+begin_src org :results drawer replace :exports both
 ,#+begin_src julia :dir ../figs/ob-julia
 using Pkg
 Pkg.status()
@@ -156,19 +159,56 @@ lines(xs, exp.(xs))
 ,#+RESULTS:
 [[file:../figs/ob-julia/exp-plot.svg]]
 #+end_src
-* TODO Feature comparison
 
-Compare with similar packages:
-- upstream version: https://github.com/bzg/org-mode/blob/main/lisp/ob-julia.el
+For the record here's what they look like when exported to html now:
+
+#+results: org-images
+:results:
+#+begin_src julia :dir ../figs/ob-julia
+using Pkg
+Pkg.status()
+#+end_src
+
+#+results: 
+: Status `~/data/www/akirakyle.com/figs/ob-julia/Project.toml`
+:   [13f3f980] CairoMakie v0.15.8
+
+#+name: sin-plot
+#+begin_src julia :results value file link :dir ../figs/ob-julia :output-dir ../figs/ob-julia
+using CairoMakie
+CairoMakie.activate!(type = "svg", pt_per_unit=2)
+xs=collect(-2π:0.1:2π)
+lines(xs, sin.(xs))
+#+end_src
+
+#+results: sin-plot
+[[file:../figs/ob-julia/sin-plot.svg]]
+
+#+begin_src julia :results value file link :file ../figs/ob-julia/exp-plot.svg
+using Pkg
+Pkg.activate("../figs/ob-julia")
+using CairoMakie
+CairoMakie.activate!(type = "svg", pt_per_unit=2)
+xs=collect(-2π:0.1:2π)
+lines(xs, exp.(xs))
+#+end_src
+
+#+results: 
+[[file:../figs/ob-julia/exp-plot.svg]]
+:END:
+* Feature comparison
+
+All the ~ob-julia~ implementations I could find:
+- upstream version: [[https://github.com/bzg/org-mode/blob/main/lisp/ob-julia.el][org-mode/lisp/ob-julia.el at main · bzg/org-mode · GitHub]]
   - Depends on [[https://ess.r-project.org/][ESS - Emacs Speaks Statistics]]
-- the original?: https://github.com/nico202/ob-julia
-- using vterm: https://github.com/shg/ob-julia-vterm.el
-- using emacs-snail:  https://github.com/gcv/julia-snail
-- a notable fork: https://github.com/karthink/ob-julia
+- the original?: [[https://github.com/nico202/ob-julia][GitHub - nico202/ob-julia: Org Mode babel support for Julia]]
+- using vterm: [[https://github.com/shg/ob-julia-vterm.el][GitHub - shg/ob-julia-vterm.el: Org-babel support for Julia code blocks using julia-vterm]]
+- using emacs-snail:  [[https://github.com/gcv/julia-snail][GitHub - gcv/julia-snail: An Emacs development environment for Julia]]
+- a notable fork: [[https://github.com/karthink/ob-julia][GitHub - karthink/ob-julia: Org Mode babel support for Julia]]
 - https://blog.tecosaur.com/tmio/2021-05-31-async.html
 
 I took a good look at all the ~ob-julia~ implementations I could find before embarking on creating this take on ~ob-julia~.
-I had hopped one of them could be fix/adapted to my workflows, however I found them all to have unnecessarily complicated logic around their rpc protocol implementation.
+I had hoped one of them could be fix/adapted to my workflows, however I found them all to have unnecessarily complicated logic around their rpc protocol implementation.
 I think it's good to view ~org-babel~ as essentially a simple rpc protocol for executing arbitrary code of other languages from elisp.
 So the main distinction of this package is the use of netstrings for rather than a unique message terminator to facilitate this rpc protocol.
 While a unique message terminator works okay in practice and helps facilitate streaming results back in principle, I think it unnecessarily complicates the implementation and in practice emacs does not handle rapid async filter functions causing buffer modifications always so elegantly.
